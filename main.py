@@ -378,7 +378,9 @@ class WorkoutEditScreen(Frame):
         Button(e_btns, text='✎',  font=('Arial', 8), bg=font2_color, fg=dark_bg_color, command=self._edit_exercise ).pack(side='left')
         Button(e_btns, text='✕',  font=('Arial', 8), bg=font2_color, fg=dark_bg_color, command=lambda: self._delete_exercise(exerc_card)).pack(side='left', padx=(4, 0))
 
-        Button(exercises, text='+ Добавить упражнение',  bg=font2_color, font=('Arial', 10),  command=self._add_exercise).pack(anchor='w', pady=10)
+        Button(exercises, text='+ Добавить упражнение',  bg=font2_color, font=('Arial', 10),  command=self._add_exercise).pack(anchor='w', pady=(10, 4))
+        Button(exercises, text='Сохранить', bg='white', font=('Arial', 10),
+               command=self._add_exercise).pack(anchor='w')
 
     def _add_exercise(self):
         dialog = ExerciseDialog(self)
