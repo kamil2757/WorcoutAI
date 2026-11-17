@@ -18,7 +18,7 @@ cursor.execute('''
         day_of_week INTEGER NOT NULL,
         order_in_day INTEGER NOT NULL,
         kind TEXT NOT NULL,
-        status TEXT DEFAULT 'planned',
+        status TEXT DEFAULT 'planned'
     )
 ''')
 
@@ -37,6 +37,7 @@ conn.commit()
 
 
 def add_profile(username):
+    print(1)
     cursor.execute('INSERT INTO profile (name) VALUES (?)', (username,))
     conn.commit()
     print('Пользователь добавлен')
@@ -105,7 +106,7 @@ def update_workout(workout_id, kind, status):
 
 
 def delete_workout(workout_id):
-    cursor.execute('DELETE FROM workout WHERE id = ?', (workout_id,))
+    cursor.execute('DELETE FROM workouts WHERE id = ?', (workout_id,))
     conn.commit()
 
 
@@ -124,5 +125,3 @@ def add_exercise(workout_id, name, sets, reps, weight, order_num):
         VALUES (?, ?, ?, ?, ?, ?)
     ''', (workout_id, name, sets, reps, weight, order_num))
     conn.commit()
-
-conn.close()

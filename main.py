@@ -3,11 +3,14 @@ from tkinter import messagebox
 from tkinter.messagebox import showerror
 from tkinter.ttk import Combobox
 
+from datebase import *
+
 bg_color = '#1c1f2b'
 dark_bg_color = '#101219'
 font_color = 'white'
 font2_color = '#a3b3d7'
 red_color = '#640b0f'
+
 
 class App(Tk):
     def __init__(self):
@@ -20,7 +23,13 @@ class App(Tk):
         self.username = None
 
         self.current_screen = None
-        self.show_screen(LoginScreen)
+
+        user = get_user()
+        if user:
+            self.username = user
+            self.show_screen(WeekScreen)
+        else:
+            self.show_screen(LoginScreen)
 
     def show_screen(self, screen_class):
         if self.current_screen:
@@ -50,6 +59,7 @@ class LoginScreen(Frame):
         if not name:
             messagebox.showerror('Ошибка', 'Поле имени не может быть пустым')
             return
+        add_profile(name)
         self.app.username = name
         self.app.show_screen(CreateWeekScreen)
 
@@ -163,6 +173,8 @@ class WeekScreen(Frame):
         super().__init__(app)
         self.app = app
         self.configure(bg=bg_color)
+
+        self.counts = get_week()
         self._build()
 
     def _build(self):
@@ -178,7 +190,7 @@ class WeekScreen(Frame):
                borderwidth=2,
                highlightthickness=0,
                activebackground=bg_color,
-               activeforeground='white',font=('Arial', 10),
+               activeforeground='white', font=('Arial', 10),
                command=lambda: self.app.show_screen(CreateAiScreen)).pack(anchor='e')
         Button(btn_frame, text='О программе',
                bg=bg_color,
@@ -193,15 +205,15 @@ class WeekScreen(Frame):
         main = Frame(self, bg=bg_color)
         center_container = Frame(main, bg=bg_color)
         center_container.pack(expand=True)
+
         days = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "ВС"]
-        counts = ["2 тр", "0", "1 тр", "2 тр", "0", "1 тр", "0"]
 
         for i in range(len(days)):
-            day_box = Frame(center_container, bg=bg_color )
+            day_box = Frame(center_container, bg=bg_color)
             day_box.pack(side='left')
 
             Label(day_box, text=days[i], bg=bg_color, font=('Arial', 10),  fg=font_color).pack()
-            Label(day_box, text=counts[i], bg=bg_color, font=('Arial', 10),  fg=font_color).pack(pady=10)
+            Label(day_box, text=f'{self.counts[i]} тр', bg=bg_color, font=('Arial', 10),  fg=font_color).pack(pady=10)
             Button(day_box, text='Подробнее', font=('Arial', 10), bg=font2_color, fg=bg_color, command=lambda: self.app.show_screen(DayScreen)).pack(padx=4)
         main.pack(fill='x')
 
