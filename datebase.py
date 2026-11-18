@@ -2,6 +2,7 @@ import sqlite3
 
 
 conn = sqlite3.connect('workoutAI.db')
+conn.execute("PRAGMA foreign_keys = ON")
 cursor = conn.cursor()
 
 
@@ -85,6 +86,8 @@ def create_workout(day_of_week, kind, status='planned'):
     """Создаем новую тренировку"""
     cursor.execute('SELECT COUNT(*) FROM  workouts WHERE day_of_week = ?', (day_of_week,))
     count = cursor.fetchone()[0]
+    if count == 2:
+        return ['Ошибка', 'Больше 2 тренировок в день нельзя']
     order_in_day = count + 1
 
     cursor.execute('''

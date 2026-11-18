@@ -493,50 +493,52 @@
 
 
 
-import sqlite3
+# import sqlite3
+#
+# conn = sqlite3.connect('todo.db')
+# cursor = conn.cursor()
+#
+# cursor.execute('''
+#     CREATE TABLE IF NOT EXISTS tasks (
+#         id INTEGER PRIMARY KEY AUTOINCREMENT,
+#         title TEXT NOT NULL,
+#         is_done INTEGER DEFAULT 0,
+#         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+#     )
+# ''')
+# conn.commit()
+#
+#
+# def add_task(title):
+#     cursor.execute('INSERT INTO tasks (title) VALUES (?)', (title,))
+#     conn.commit()
+#     print(f'Задача {title} добавлена!')
+#
+#
+# def get_all_tasks():
+#     cursor.execute('SELECT id, title, is_done FROM tasks')
+#     rows = cursor.fetchall()
+#     for row in rows:
+#         status = '✓' if rows[2] == 1 else '✗'
+#         print(f'[{row[0]}] {row[1]} - {status}')
+#
+#
+# def mark_as_done(task_id):
+#     cursor.execute('UPDATE tasks SET is_done = 1 WHERE id = ?', (task_id,))
+#     conn.commit()
+#     print(f"Задача с ID {task_id} выполнена!")
+#
+#
+# def delete_task(task_id):
+#     cursor.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
+#     conn.commit()
+#     print(f"Задача с ID {task_id} удалена!")
+#
+#
+#
+# add_task('buy bread')
+# mark_as_done(1)
+# delete_task(1)
+# conn.close()
 
-conn = sqlite3.connect('todo.db')
-cursor = conn.cursor()
 
-cursor.execute('''
-    CREATE TABLE IF NOT EXISTS tasks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        is_done INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-''')
-conn.commit()
-
-
-def add_task(title):
-    cursor.execute('INSERT INTO tasks (title) VALUES (?)', (title,))
-    conn.commit()
-    print(f'Задача {title} добавлена!')
-
-
-def get_all_tasks():
-    cursor.execute('SELECT id, title, is_done FROM tasks')
-    rows = cursor.fetchall()
-    for row in rows:
-        status = '✓' if rows[2] == 1 else '✗'
-        print(f'[{row[0]}] {row[1]} - {status}')
-
-
-def mark_as_done(task_id):
-    cursor.execute('UPDATE tasks SET is_done = 1 WHERE id = ?', (task_id,))
-    conn.commit()
-    print(f"Задача с ID {task_id} выполнена!")
-
-
-def delete_task(task_id):
-    cursor.execute('DELETE FROM tasks WHERE id = ?', (task_id,))
-    conn.commit()
-    print(f"Задача с ID {task_id} удалена!")
-
-
-
-add_task('buy bread')
-mark_as_done(1)
-delete_task(1)
-conn.close()
