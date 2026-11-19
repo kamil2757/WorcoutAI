@@ -1,10 +1,13 @@
+import os
 import sqlite3
 
+# Абсолютный путь к БД: файл всегда лежит рядом со скриптом
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'workoutAI.db')
 
-conn = sqlite3.connect('workoutAI.db')
+conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 conn.execute("PRAGMA foreign_keys = ON")
+conn.row_factory = sqlite3.Row  # доступ к колонкам по именам
 cursor = conn.cursor()
-
 
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS profile (
@@ -16,115 +19,123 @@ cursor.execute('''
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS workouts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        day_of_week INTEGER NOT NULL,
+        day_of_week INTEGER NOT NULL CHECK(day_of_week BETWEEN 0 AND 6),
         order_in_day INTEGER NOT NULL,
         kind TEXT NOT NULL,
-        status TEXT DEFAULT 'planned'
+        status TEXT DEFAULT 'planned' CHECK(status IN ('planned', 'done')),
+        UNIQUE(day_of_week, order_in_day)
     )
 ''')
 
 cursor.execute('''
     CREATE TABLE IF NOT EXISTS exercises (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        workout_id INTEGER NOT NULL, 
-        name TEXT NOT NULL,
-        sets INTEGER NOT NULL,
-        reps INTEGER NOT NULL,
-        weight REAL DEFAULT 0,
+        workout_id INTEGER NOT NULL,
+        name TEXT NOT NULL CHECK(length(trim(name)) > 0),
+        sets INTEGER NOT NULL CHECK(sets > 0),
+        reps INTEGER NOT NULL CHECK(reps > 0),
+        weight REAL DEFAULT 0 CHECK(weight >= 0),
         order_num INTEGER NOT NULL,
-        FOREIGN KEY (workout_id) REFERENCES workouts(id) ON DELETE CASCADE)
+        FOREIGN KEY (workout_id) REFERENCES workouts(id) ON DELETE CASCADE
+    )
 ''')
 conn.commit()
 
 
+class WorkoutLimitError(Exception):
+    """Больше 2 тренировок в день."""
+    pass
+
+
 def add_profile(username):
-    print(1)
     cursor.execute('INSERT INTO profile (name) VALUES (?)', (username,))
     conn.commit()
-    print('Пользователь добавлен')
 
 
 def get_user():
-    cursor.execute('SELECT name FROM profile LIMIT 1')
+    cursor.execute('SELECT name FROM profile ORDER BY id LIMIT 1')
     row = cursor.fetchone()
-    if row:
-        return row[0]
-    return None
+    return row['name'] if row else None
 
 
 def get_week():
-    """Возвращает количество тренировок на каждый день недели"""
-    cursor.execute('SELECT day_of_week, COUNT(*) FROM workouts GROUP BY day_of_week')
-    rows = cursor.fetchall()
-
+    """Количество тренировок на каждый день недели (список из 7 чисел)."""
+    cursor.execute('SELECT day_of_week, COUNT(*) AS count FROM workouts GROUP BY day_of_week')
     counts = [0] * 7
-    for day_indx, count in rows:
-        counts[day_indx] = count
+    for row in cursor.fetchall():
+        counts[row['day_of_week']] = row['count']
     return counts
 
 
 def get_day(day_of_week):
-    """Возвращает тренировки и упражнения для конкретного дня"""
-    cursor.execute('SELECT id, order_in_day, kind, status FROM workouts WHERE day_of_week = ?', (day_of_week,))
-    rows = cursor.fetchall()
+    """
+    Тренировки дня в виде списка словарей:
+    {'id', 'order_in_day', 'kind', 'status', 'exercises': [{'name','sets','reps','weight','order_num'}, ...]}
+    """
+    cursor.execute(
+        'SELECT id, order_in_day, kind, status FROM workouts '
+        'WHERE day_of_week = ? ORDER BY order_in_day',
+        (day_of_week,))
+    workouts = cursor.fetchall()
+
     data = []
-    for r in rows:
-        cursor.execute('SELECT name, sets, reps, weight, order_num FROM exercises WHERE workout_id=? ORDER BY order_num', (r[0],))
-        d_exercises = cursor.fetchall()
-        data.append([r, d_exercises])
+    for w in workouts:
+        cursor.execute(
+            'SELECT name, sets, reps, weight, order_num FROM exercises '
+            'WHERE workout_id = ? ORDER BY order_num',
+            (w['id'],))
+        workout = dict(w)
+        workout['exercises'] = [dict(ex) for ex in cursor.fetchall()]
+        data.append(workout)
     return data
 
 
-# def get_exercises(workout_id):
-#     cursor.execute('SELECT name, sets, reps, weight, order_num FROM exercises WHERE workout_id = ? ORDER BY order_num', (workout_id,))
-#     rows = cursor.fetchall()
-#     return rows
+def create_week_AI():
+    pass
 
 
+def save_workout(workout_id, day_of_week, kind, status, exercises):
+    """
+    Атомарное сохранение тренировки вместе с упражнениями.
+    Если что-то упадёт - вся операция откатывается.
+    """
+    try:
+        if workout_id:
+            cursor.execute('UPDATE workouts SET kind = ?, status = ? WHERE id = ?',
+                           (kind, status, workout_id))
+            cursor.execute('DELETE FROM exercises WHERE workout_id = ?', (workout_id,))
+        else:
+            cursor.execute('SELECT COUNT(*) AS count FROM workouts WHERE day_of_week = ?',
+                           (day_of_week,))
+            if cursor.fetchone()['count'] >= 2:
+                raise WorkoutLimitError('Больше 2 тренировок в день нельзя')
 
-def create_workout(day_of_week, kind, status='planned'):
-    """Создаем новую тренировку"""
-    cursor.execute('SELECT COUNT(*) FROM  workouts WHERE day_of_week = ?', (day_of_week,))
-    count = cursor.fetchone()[0]
-    if count == 2:
-        return ['Ошибка', 'Больше 2 тренировок в день нельзя']
-    order_in_day = count + 1
+            cursor.execute(
+                'INSERT INTO workouts (day_of_week, order_in_day, kind, status) '
+                'VALUES (?, (SELECT COALESCE(MAX(order_in_day), 0) + 1 FROM workouts WHERE day_of_week = ?), ?, ?)',
+                (day_of_week, day_of_week, kind, status))
+            workout_id = cursor.lastrowid
 
-    cursor.execute('''
-        INSERT INTO workouts (day_of_week, order_in_day, kind, status)
-        VALUES (?,?,?,?)
-    ''', (day_of_week, order_in_day, kind, status))
-    conn.commit()
-    return cursor.lastrowid
+        for i, ex in enumerate(exercises):
+            cursor.execute(
+                'INSERT INTO exercises (workout_id, name, sets, reps, weight, order_num) '
+                'VALUES (?, ?, ?, ?, ?, ?)',
+                (workout_id, ex['name'], ex['sets'], ex['reps'], ex['weight'], i))
+
+        conn.commit()
+        return workout_id
+    except Exception:
+        conn.rollback()
+        raise
 
 
-def update_workout(workout_id, kind, status):
-    """Обновляет данные существующей тренировки."""
-    cursor.execute('''
-        UPDATE workouts
-        SET kind = ?, status = ?
-        WHERE id = ?    
-    ''', (kind, status, workout_id))
+def clean_week():
+    """Очистка недели"""
+    cursor.execute('DELETE FROM workouts')
     conn.commit()
 
 
 def delete_workout(workout_id):
+    # упражнения удалятся сами (ON DELETE CASCADE)
     cursor.execute('DELETE FROM workouts WHERE id = ?', (workout_id,))
-    conn.commit()
-
-
-def delete_workout_exercises(workout_id):
-    """Удаляет все упражнения конкретной тренировки (для перезаписи)."""
-    cursor.execute('''
-        DELETE FROM exercises WHERE workout_id = ?
-    ''', (workout_id,))
-    conn.commit()
-
-
-def add_exercise(workout_id, name, sets, reps, weight, order_num):
-    """Добавляет одно упражнение в тренировку."""
-    cursor.execute('''
-        INSERT INTO exercises (workout_id, name, sets, reps, weight, order_num)
-        VALUES (?, ?, ?, ?, ?, ?)
-    ''', (workout_id, name, sets, reps, weight, order_num))
     conn.commit()

@@ -541,4 +541,28 @@
 # delete_task(1)
 # conn.close()
 
+from gigachat import GigaChat
 
+giga = GigaChat(
+    credentials="MDFhMWYzZWItZjkwOS03OWZkLWJkNDUtZjZkMjFkYmM2ZmMxOjM1NzA2MTI0LTc1YzgtNDg4ZC1hM2Q0LTc4OWJmZDU5OWVlMA==",
+    scope="GIGACHAT_API_PERS",
+    verify_ssl_certs=False
+)
+
+# 1. Список моделей
+print("=== Доступные модели ===")
+models = giga.get_models().data
+for m in models:
+    print("-", m.id_)
+
+# 2. Проверка какая реально работает
+print("\n=== Проверка моделей ===")
+for m in models:
+    try:
+        resp = giga.chat({
+            "model": m.id_,
+            "messages": [{"role": "user", "content": "Скажи привет одним словом"}]
+        })
+        print(f"[РАБОТАЕТ] {m.id_} -> {resp.choices[0].message.content[:40]}")
+    except Exception as e:
+        print(f"[НЕ ДОСТУПНА] {m.id_} ({str(e)[:60]})")
