@@ -6,6 +6,7 @@ import threading
 from tkinter import *
 from tkinter import messagebox
 from tkinter.ttk import Combobox
+import sys
 from database import (
     WorkoutLimitError,
     add_profile,
@@ -18,8 +19,14 @@ from database import (
 )
 from dotenv import load_dotenv
 from gigachat import GigaChat  # Подключаем библиотеку Сбера
+import ctypes
 
-load_dotenv()
+if getattr(sys, "frozen", False):
+    env_path = os.path.join(os.path.dirname(sys.executable), ".env")
+else:
+    env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env")
+load_dotenv(env_path)
+
 bg_color = "#1c1f2b"
 dark_bg_color = "#101219"
 font_color = "white"
@@ -47,6 +54,18 @@ giga = GigaChat(
 )
 # ------------------------------------------------------
 
+def resource_path(relative_path):
+    """Возвращает корректный путь к ресурсам для .py и для собранного .exe."""
+    if getattr(sys, "frozen", False):
+        # Сначала проверяем рядом с .exe, затем во временной папке PyInstaller
+        exe_dir = os.path.dirname(sys.executable)
+        local_path = os.path.join(exe_dir, relative_path)
+        if os.path.exists(local_path):
+            return local_path
+        base_path = getattr(sys, "_MEIPASS", exe_dir)
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, relative_path)
 
 class ScrollableFrame(Frame):
     """Контейнер Frame с поддержкой вертикальной прокрутки колесиком мыши."""
@@ -118,11 +137,23 @@ class App(Tk):
 
     def __init__(self):
         """Инициализирует главное окно и открывает стартовый экран."""
+        try:
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                "kamil.workoutai.app.1"
+            )
+        except Exception:
+            pass
+
         super().__init__()
         self.title("WorkoutИИ")
         self.geometry("700x400")
         self.resizable(False, False)
         self.configure(bg=bg_color)
+
+        try:
+            self.iconbitmap(default=resource_path("icon.ico"))
+        except Exception:
+            pass
 
         self.username = None
         self.current_screen = None

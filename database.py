@@ -2,11 +2,15 @@
 
 import os
 import sqlite3
+import sys
 
 # Абсолютный путь к БД: файл всегда лежит рядом со скриптом
-DB_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "workoutAI.db"
-)
+if getattr(sys, "frozen", False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+DB_PATH = os.path.join(BASE_DIR, "workoutAI.db")
 
 conn = sqlite3.connect(DB_PATH, check_same_thread=False)
 conn.execute("PRAGMA foreign_keys = ON")
