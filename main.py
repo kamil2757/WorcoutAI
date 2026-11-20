@@ -1,3 +1,5 @@
+"""Главный модуль графического интерфейса приложения WorkoutИИ."""
+
 import json
 import os
 import threading
@@ -36,7 +38,6 @@ DAYS_FULL = [
 ]
 
 # ----------------- НАСТРОЙКА GIGACHAT -----------------
-# Вставьте сюда ваш длинный ключ Base64 из личного кабинета developers.sber.ru
 GIGA_CREDENTIALS = os.getenv("GIGACHAT_CREDENTIALS")
 
 giga = GigaChat(
@@ -48,8 +49,10 @@ giga = GigaChat(
 
 
 class ScrollableFrame(Frame):
+    """Контейнер Frame с поддержкой вертикальной прокрутки колесиком мыши."""
 
     def __init__(self, container, height=150, *args, **kwargs):
+        """Инициализирует область прокрутки Canvas и полосу Scrollbar."""
         super().__init__(container, *args, **kwargs)
         self.canvas = Canvas(
             self, bg=bg_color, highlightthickness=0, height=height
@@ -78,11 +81,13 @@ class ScrollableFrame(Frame):
         self.bind("<Leave>", self._unbind_wheel)
 
     def _bind_wheel(self, event=None):
+        """Привязывает события прокрутки колесика мыши при наведении курсора."""
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
         self.canvas.bind_all("<Button-4>", self._on_mousewheel)
         self.canvas.bind_all("<Button-5>", self._on_mousewheel)
 
     def _unbind_wheel(self, event=None):
+        """Отвязывает события прокрутки при уходе курсора за пределы области."""
         w = self.winfo_containing(*self.winfo_pointerxy())
         if w is not None and str(w).startswith(str(self)):
             return
@@ -91,6 +96,7 @@ class ScrollableFrame(Frame):
         self.canvas.unbind_all("<Button-5>")
 
     def _on_mousewheel(self, event):
+        """Обрабатывает прокрутку содержимого Canvas колесиком мыши."""
         if not self.canvas.winfo_exists():
             return
         if self.scrollable_frame.winfo_height() <= self.canvas.winfo_height():
@@ -108,11 +114,13 @@ class ScrollableFrame(Frame):
 
 
 class App(Tk):
+    """Главное окно приложения, управляющее переключением экранов."""
 
     def __init__(self):
+        """Инициализирует главное окно и открывает стартовый экран."""
         super().__init__()
         self.title("WorkoutИИ")
-        self.geometry("700x450")
+        self.geometry("700x400")
         self.resizable(False, False)
         self.configure(bg=bg_color)
 
@@ -127,6 +135,7 @@ class App(Tk):
             self.show_screen(LoginScreen)
 
     def show_screen(self, screen_class, *args, **kwargs):
+        """Уничтожает текущий экран и отображает новый."""
         if self.current_screen:
             self.current_screen.destroy()
         self.current_screen = screen_class(self, *args, **kwargs)
@@ -134,8 +143,10 @@ class App(Tk):
 
 
 class LoginScreen(Frame):
+    """Экран первичного ввода имени пользователя при первом запуске."""
 
     def __init__(self, app):
+        """Инициализирует экран регистрации."""
         super().__init__(app)
         self.app = app
         self.username_var = StringVar()
@@ -143,6 +154,7 @@ class LoginScreen(Frame):
         self._build()
 
     def _build(self):
+        """Создает и размещает виджеты экрана входа."""
         Label(
             self,
             text="WorkoutИИ: Журнал тренировок",
@@ -170,6 +182,7 @@ class LoginScreen(Frame):
         ).pack()
 
     def _login(self):
+        """Проверяет введенное имя, сохраняет профиль и переходит далее."""
         name = self.username_var.get().strip()
         if not name:
             messagebox.showerror("Ошибка", "Поле имени не может быть пустым")
@@ -180,14 +193,17 @@ class LoginScreen(Frame):
 
 
 class CreateWeekScreen(Frame):
+    """Экран выбора способа создания расписания (вручную или через ИИ)."""
 
     def __init__(self, app):
+        """Инициализирует экран выбора способа планирования."""
         super().__init__(app)
         self.app = app
         self.configure(bg=bg_color)
         self._build()
 
     def _build(self):
+        """Создает кнопки выбора режима создания расписания."""
         Label(
             self,
             text=f"Привет, {self.app.username}",
@@ -247,8 +263,10 @@ class CreateWeekScreen(Frame):
 
 
 class CreateAiScreen(Frame):
+    """Экран заполнения анкеты пользователя для генерации плана через GigaChat."""
 
     def __init__(self, app):
+        """Инициализирует переменные формы анкеты и строит интерфейс."""
         super().__init__(app)
         self.app = app
 
@@ -265,11 +283,13 @@ class CreateAiScreen(Frame):
         self._build()
 
     def _label(self, parent, text, row, column, padx=0):
+        """Вспомогательный метод для создания текстовой метки в сетке Grid."""
         Label(
             parent, text=text, bg=bg_color, font=("Arial", 10), fg=font_color
         ).grid(row=row, column=column, sticky="w", pady=2, padx=padx)
 
     def _build(self):
+        """Создает поля ввода анкеты и кнопки управления."""
         header = Frame(self, bg=bg_color)
         header.pack()
         Label(
@@ -351,8 +371,8 @@ class CreateAiScreen(Frame):
             fg=font_color,
         ).grid(row=7, column=0, columnspan=4, sticky="w", pady=(15, 2))
 
-        self.wishesText = Text(main, height=4, width=40)
-        self.wishesText.grid(row=8, column=0, columnspan=3, sticky="ew", pady=5)
+        self.wishes_text = Text(main, height=4, width=40)
+        self.wishes_text.grid(row=8, column=0, columnspan=3, sticky="ew", pady=5)
 
         btn_frame = Frame(main, bg=bg_color)
         btn_frame.grid(row=8, column=3, columnspan=2, sticky="w", padx=10)
@@ -375,6 +395,7 @@ class CreateAiScreen(Frame):
         self.cancel_button.pack(side="left")
 
     def _generate(self):
+        """Проверяет данные анкеты, формирует промпт и запускает поток обращения к ИИ."""
         try:
             height = self.height_var.get()
             weight = self.weight_var.get()
@@ -410,10 +431,10 @@ class CreateAiScreen(Frame):
             )
             return
 
-        wishes = self.wishesText.get("1.0", END).strip()
+        wishes = self.wishes_text.get("1.0", END).strip()
 
         # 1. Собираем текст для ИИ ЗДЕСЬ, пока переменные height, weight и т.д. доступны
-        data_to_AI = f"""
+        data_to_ai = f"""
         Параметры пользователя:
         - Рост: {height} см, Вес: {weight} кг, Возраст: {age} лет
         - Цель: {aim}, Опыт: {experience}, Инвентарь: {equipment}
@@ -461,12 +482,14 @@ class CreateAiScreen(Frame):
         self.cancel_button.config(state=DISABLED)
 
         thread = threading.Thread(
-            target=self._fetch_ai_plan, args=(data_to_AI, system_prompt), daemon=True
+            target=self._fetch_ai_plan,
+            args=(data_to_ai, system_prompt),
+            daemon=True,
         )
         thread.start()
 
-    # 3. Этот метод выполняется В ФОНЕ (чтобы окно не зависло)
-    def _fetch_ai_plan(self, data_to_AI, system_prompt):
+    def _fetch_ai_plan(self, data_to_ai, system_prompt):
+        """Отправляет запрос к API GigaChat в фоновом потоке и парсит JSON-ответ."""
         try:
             # Стучимся к GigaChat
             response = giga.chat(
@@ -475,7 +498,7 @@ class CreateAiScreen(Frame):
                     "temperature": 0.2,
                     "messages": [
                         {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": data_to_AI},
+                        {"role": "user", "content": data_to_ai},
                     ],
                 }
             )
@@ -497,8 +520,8 @@ class CreateAiScreen(Frame):
             # Если ошибка — тоже возвращаемся в главный поток, чтобы показать сообщение
             self.after(0, self._on_ai_error, str(e))
 
-    # 5. Выполняется в главном потоке, если ИИ ответил успешно
     def _on_ai_success(self, result):
+        """Сохраняет сгенерированный ИИ план в БД и открывает экран недели."""
         self.generate_btn.config(state=NORMAL, text="Сгенерировать")
         self.cancel_button.config(state=NORMAL, text="Отмена")
         try:
@@ -515,8 +538,8 @@ class CreateAiScreen(Frame):
                 "Ошибка БД", f"Не удалось сохранить план: {e}"
             )
 
-    # 6. Выполняется в главном потоке, если ИИ выдал ошибку
     def _on_ai_error(self, error_msg):
+        """Разблокирует кнопки и выводит сообщение об ошибке генерации ИИ."""
         self.generate_btn.config(state=NORMAL, text="Сгенерировать")
         self.cancel_button.config(state=NORMAL, text="Отмена")
         messagebox.showerror(
@@ -525,8 +548,10 @@ class CreateAiScreen(Frame):
 
 
 class WeekScreen(Frame):
+    """Главный экран обзора расписания тренировок на всю неделю."""
 
     def __init__(self, app):
+        """Загружает количество тренировок по дням недели и строит интерфейс."""
         super().__init__(app)
         self.app = app
         self.configure(bg=bg_color)
@@ -534,6 +559,7 @@ class WeekScreen(Frame):
         self._build()
 
     def _build(self):
+        """Создает шапку профиля и карточки 7 дней недели."""
         header = Frame(self, bg=bg_color)
         header.pack(fill="x", pady=(0, 40))
         Label(
@@ -569,7 +595,7 @@ class WeekScreen(Frame):
             activebackground=bg_color,
             activeforeground="white",
             font=("Arial", 10),
-            command=self._aboutProgramm,
+            command=self._about_program,
         ).pack(anchor="e")
 
         main = Frame(self, bg=bg_color)
@@ -603,15 +629,18 @@ class WeekScreen(Frame):
             ).pack(padx=4)
         main.pack(fill="x")
 
-    def _aboutProgramm(self):
+    def _about_program(self):
+        """Открывает модальное окно с информацией о программе."""
         dialog = AboutDialog(self)
         self.wait_window(dialog)
 
 
 # ---------------------------------------------------------------- День
 class DayScreen(Frame):
+    """Экран подробного просмотра тренировок выбранного дня недели."""
 
     def __init__(self, app, week_day_id):
+        """Загружает данные тренировок за выбранный день и строит интерфейс."""
         super().__init__(app)
         self.app = app
         self.configure(bg=bg_color)
@@ -622,6 +651,7 @@ class DayScreen(Frame):
         self._build()
 
     def _build(self):
+        """Отображает карточки тренировок дня и кнопки управления."""
         header = Frame(self, bg=bg_color)
         header.pack(fill="x")
 
@@ -678,7 +708,7 @@ class DayScreen(Frame):
                     font=("Arial", 10),
                     fg=font_color,
                     wraplength=260,
-                    justify='left'
+                    justify="left",
                 ).pack(padx=10, anchor="w")
 
             if len(exercises) > 5:
@@ -746,6 +776,7 @@ class DayScreen(Frame):
         ).pack()
 
     def _delete_train(self, workout_id):
+        """Запрашивает подтверждение и удаляет выбранную тренировку."""
         if messagebox.askyesno("Удаление", "Удалить тренировку?"):
             delete_workout(workout_id)
             self.app.show_screen(DayScreen, self.week_day_id)
@@ -753,8 +784,10 @@ class DayScreen(Frame):
 
 # ---------------------------------------------------------------- О программе
 class AboutDialog(Toplevel):
+    """Модальное диалоговое окно со сведениями о программе и авторе."""
 
     def __init__(self, parent):
+        """Инициализирует модальное окно «О программе»."""
         super().__init__(parent)
         self.title("WorkoutИИ")
         self.geometry("400x280")
@@ -766,6 +799,7 @@ class AboutDialog(Toplevel):
         self._build()
 
     def _build(self):
+        """Размещает текст с описанием версии, автора и ссылкой на GitHub."""
         Label(
             self,
             text="О программе",
@@ -821,8 +855,10 @@ class AboutDialog(Toplevel):
 
 # ---------------------------------------------------------------- Редактирование тренировки
 class WorkoutEditScreen(Frame):
+    """Экран создания новой или редактирования существующей тренировки."""
 
     def __init__(self, app, week_day_id, data=None):
+        """Инициализирует параметры тренировки и список её упражнений."""
         super().__init__(app)
         self.app = app
         self.configure(bg=bg_color)
@@ -851,6 +887,7 @@ class WorkoutEditScreen(Frame):
         self._build()
 
     def _build(self):
+        """Строит интерфейс выбора типа, статуса и прокручиваемого списка упражнений."""
         header = Frame(self, bg=bg_color)
         header.pack(fill="x")
 
@@ -876,31 +913,31 @@ class WorkoutEditScreen(Frame):
             fg=font_color,
         ).pack(anchor="e")
 
-        miniForm = Frame(self, bg=bg_color)
-        miniForm.pack()
+        mini_form = Frame(self, bg=bg_color)
+        mini_form.pack()
         Label(
-            miniForm,
+            mini_form,
             text="Тип: ",
             bg=bg_color,
             font=("Arial", 10),
             fg=font_color,
         ).grid(row=0, column=0)
         Combobox(
-            miniForm,
+            mini_form,
             state="readonly",
             textvariable=self.type_var,
             values=["Силовая", "Кардио", "Функциональная", "Растяжка"],
             width=16,
         ).grid(row=0, column=1)
         Label(
-            miniForm,
+            mini_form,
             text="Статус: ",
             bg=bg_color,
             font=("Arial", 10),
             fg=font_color,
         ).grid(row=1, column=0)
         Checkbutton(
-            miniForm,
+            mini_form,
             variable=self.status_var,
             text="Выполнена",
             bg=bg_color,
@@ -933,7 +970,11 @@ class WorkoutEditScreen(Frame):
             command=self._add_exercise,
         ).pack(side="left", padx=2)
         Button(
-            btns, text="Сохранить", bg="white", font=("Arial", 10), command=self._save
+            btns,
+            text="Сохранить",
+            bg="white",
+            font=("Arial", 10),
+            command=self._save,
         ).pack(side="left")
 
         self.cards_frame = ScrollableFrame(exercises, height=150, bg=bg_color)
@@ -942,6 +983,7 @@ class WorkoutEditScreen(Frame):
             self._add_exercise_card(ex)
 
     def _add_exercise_card(self, ex):
+        """Создает визуальную карточку упражнения с кнопками редактирования и удаления."""
         card = Frame(
             self.cards_frame.scrollable_frame, bg=dark_bg_color, padx=6, pady=2
         )
@@ -984,6 +1026,7 @@ class WorkoutEditScreen(Frame):
         ).pack(side="left", padx=(4, 0))
 
     def _save(self):
+        """Проверяет наличие упражнений и сохраняет тренировку в базу данных."""
         if not self.exercise_data:
             messagebox.showerror(
                 "Ошибка", "Тренировка не может быть без упражнений"
@@ -1011,6 +1054,7 @@ class WorkoutEditScreen(Frame):
         self.app.show_screen(DayScreen, self.week_day_id)
 
     def _add_exercise(self):
+        """Открывает диалог добавления нового упражнения."""
         dialog = ExerciseDialog(self)
         self.wait_window(dialog)
         if dialog.result:
@@ -1018,6 +1062,7 @@ class WorkoutEditScreen(Frame):
             self._add_exercise_card(dialog.result)
 
     def _edit_exercise(self, ex):
+        """Открывает диалог редактирования выбранного упражнения и обновляет список."""
         dialog = ExerciseDialog(self, ex)
         self.wait_window(dialog)
         if dialog.result:
@@ -1029,6 +1074,7 @@ class WorkoutEditScreen(Frame):
                 self._add_exercise_card(e)
 
     def _delete_exercise(self, card, ex):
+        """Удаляет упражнение из текущего списка после подтверждения."""
         if messagebox.askyesno("Удаление", "Удалить упражнение?"):
             self.exercise_data = [
                 e for e in self.exercise_data if e is not ex
@@ -1037,8 +1083,10 @@ class WorkoutEditScreen(Frame):
 
 
 class ExerciseDialog(Toplevel):
+    """Модальное диалоговое окно для добавления или редактирования упражнения."""
 
     def __init__(self, parent, exercise=None):
+        """Инициализирует поля ввода параметров упражнения."""
         super().__init__(parent)
         self.title("Упражнение")
         self.geometry("400x300")
@@ -1064,6 +1112,7 @@ class ExerciseDialog(Toplevel):
         self._build()
 
     def _build(self):
+        """Создает элементы формы ввода названия, подходов, повторений и веса."""
         Label(
             self,
             text="Упражнение",
@@ -1147,6 +1196,7 @@ class ExerciseDialog(Toplevel):
         ).grid(row=6, column=1, sticky="w")
 
     def _add(self):
+        """Валидирует введенные данные упражнения и закрывает диалоговое окно."""
         try:
             name = self.title_var.get().strip()
             sets = self.sets_var.get()
