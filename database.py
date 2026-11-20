@@ -90,10 +90,6 @@ def get_day(day_of_week):
     return data
 
 
-def create_week_AI():
-    pass
-
-
 def save_workout(workout_id, day_of_week, kind, status, exercises):
     """
     Атомарное сохранение тренировки вместе с упражнениями.
